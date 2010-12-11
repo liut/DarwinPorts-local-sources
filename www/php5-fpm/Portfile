@@ -1,0 +1,425 @@
+# $Id$
+PortSystem              1.0
+name                    php5-fpm
+conflicts               php5-cgi php5-devel php52
+epoch                   1
+version                 5.3.4
+set major               [lindex [split ${version} .] 0]
+set my_name             php${major}
+dist_subdir             ${my_name}
+categories              lang php www
+maintainers             ryandesign jwa liut
+homepage                http://www.php.net/
+master_sites            php http://us.php.net/distributions/
+distname                php-${version}
+use_bzip2               yes
+platforms               darwin freebsd
+use_parallel_build      yes
+description \
+    PHP: Hypertext Preprocessor
+long_description \
+    PHP is a widely-used general-purpose scripting language \
+    that is especially suited for developing web sites, but can also \
+    be used for command-line scripting.
+checksums \
+    [suffix ${distname}] \
+    md5     2c069d8f690933e3bf6a8741ed818150 \
+    sha1    0b33926e78e1683e3383b3b5c840ee60ba669b0b \
+    rmd160  dffbeced87117fd34c948de3ebdde01a25c24dae
+depends_build \
+    port:pkgconfig \
+    port:autoconf213
+depends_lib \
+    path:bin/gsed:gsed \
+    port:libevent \
+	port:libiconv \
+    port:libtool \
+    port:libxml2 \
+    port:bzip2 \
+	port:curl \
+    port:openssl \
+    port:pcre \
+    port:readline \
+    port:zlib
+# Use -p1 to accommodate the Suhosin patch
+#patch.pre_args          -p1
+#patchfiles \
+#    patch-scripts-php-config.in.diff
+use_autoconf            yes
+autoconf.cmd            ${prefix}/bin/autoconf213
+set phpinidir           ${prefix}/etc/${my_name}
+set extraphpinidir      ${prefix}/var/db/${my_name}
+destroot.keepdirs       ${destroot}${extraphpinidir}
+configure.args \
+    --mandir=${prefix}/share/man \
+    --infodir=${prefix}/share/info \
+    --with-config-file-path=${phpinidir} \
+    --with-config-file-scan-dir=${extraphpinidir} \
+    --disable-all \
+    --enable-bcmath=shared \
+    --enable-ctype \
+    --enable-dom \
+    --enable-fileinfo=shared \
+    --enable-filter \
+    --enable-ftp \
+    --enable-hash \
+    --enable-json \
+    --enable-libxml \
+	--enable-mbstring=shared \
+    --enable-pdo \
+    --enable-phar \
+    --enable-session \
+    --enable-simplexml=shared \
+    --enable-tokenizer \
+    --enable-xml \
+    --enable-xmlreader=shared \
+    --enable-xmlwriter=shared \
+    --with-bz2=shared,${prefix} \
+	--with-iconv=${prefix} \
+	--with-curl=${prefix} \
+    --with-openssl=${prefix} \
+    --with-pcre-regex=${prefix} \
+    --with-readline=${prefix} \
+    --with-libxml-dir=${prefix} \
+    --with-zlib=${prefix} \
+    --without-pear \
+    --disable-cgi
+# php5-mysql +mysqlnd needs mysqlnd support compiled into php
+configure.env-append    PHP_MYSQLND_ENABLED=yes
+configure.universal_args-delete --disable-dependency-tracking
+platform darwin 10 {
+    configure.env-append \
+        LIBS=-lresolv
+}
+platform macosx {
+    configure.args-append \
+		--with-kerberos=/usr \
+		--with-ldap=/usr
+}
+variant no_web conflicts apache apache2 fastcgi description {Don't include any web server support} {}
+# Build an Apache 1 module. On Mac OS X, it uses Apple's provided Apache 1 server.
+# On other platforms, the MacPorts apache port is used. Keep the options here
+# in sync with those in the relevant part of the post-destroot phase.
+variant apache conflicts apache2 no_web description {Add Apache 1 web server module} {
+    if { ! [variant_isset macosx] && (![info exists os.subplatform] || ${os.subplatform} != "macosx") } {
+        depends_lib-append \
+            port:apache
+        configure.args-append \
+            --with-apxs=${prefix}/sbin/apxs
+    } else {
+        destroot.violate_mtree yes
+        configure.args-append \
+            --with-apxs=/usr/sbin/apxs
+    }
+}
+# Build an Apache 2.2 module. Keep the options here in sync with those in the
+# relevant part of the post-destroot phase.
+variant apache2 conflicts apache no_web description {Add Apache 2.2 web server module} {
+    pre-configure {
+        # Checking for mod_cgi.so is a convenient way to verify apache2 is using its
+        # +preforkmpm variant. (+eventmpm and +workermpm instead provide mod_cgid.so.)
+        if {![file exists ${prefix}/apache2/modules/mod_cgi.so]} {
+            ui_error "To use ${name} with the +apache2 variant, apache2 must be installed with the +preforkmpm variant."
+            return -code error "incompatible apache2 installation"
+        }
+    }
+    destroot.violate_mtree yes
+    depends_lib-append \
+        port:apache2
+    configure.args-append \
+        --with-apxs2=${prefix}/apache2/bin/apxs
+}
+# Build a FastCGI binary. Keep the options here in sync with those in the
+# relevant part of the post-destroot phase.
+variant fastcgi conflicts no_web description {Add FastCGI web server binary} {
+    if { ![variant_isset apache] && ![variant_isset apache2] } {
+        configure.args-delete \
+            --disable-cgi
+        configure.args-append \
+            --enable-cgi
+    }
+}
+foreach {old_variant new_port} {
+    gmp             gmp
+    imap            imap
+    macports_snmp   snmp
+    mssql           mssql
+    mysql3          mysql
+    mysql4          mysql
+    mysql5          mysql
+    mysqlnd         mysql
+    oracle          oracle
+    pcntl           pcntl
+    postgresql82    postgresql
+    postgresql83    postgresql
+    pspell          pspell
+    snmp            snmp
+    sockets         sockets
+    sqlite          sqlite
+    tidy            tidy
+} {
+    eval [subst {
+        variant ${old_variant} description "Obsolete; install ${my_name}-${new_port} port instead" {
+            pre-configure {
+                ui_msg "The +${old_variant} variant is obsolete. Please install the ${my_name}-${new_port} port instead."
+            }
+        }
+    }]
+}
+variant gd description {Add GD support} {
+	depends_lib-append \
+		port:freetype \
+		port:jpeg \
+		port:libpng \
+		port:zlib
+	configure.args-append \
+		--with-gd=shared \
+		--with-freetype-dir=${prefix} \
+		--with-jpeg-dir=${prefix} \
+		--with-png-dir=${prefix} \
+		--with-zlib-dir=${prefix} \
+		--enable-gd-native-ttf
+}
+variant mysqlnd conflicts mysql4 mysql5 description {Use MySQL Native Driver} {
+    configure.args-append       --with-mysql=shared,mysqlnd \
+								--with-mysqli=shared,mysqlnd \
+                                --with-pdo-mysql=shared,mysqlnd
+    configure.cppflags-append   -I${worksrcpath}
+    post-install {
+        set phpini ${prefix}/etc/php5/php.ini
+        if {1} {
+            ui_msg "To use mysqlnd with a local MySQL server, edit ${phpini} and set"
+            ui_msg "mysql.default_socket, mysqli.default_socket and pdo_mysql.default_socket"
+            ui_msg "to ${prefix}/var/run/mysql5/mysqld.sock"
+        }
+    }
+}
+variant postgresql description {Add PostgreSQL support} {
+	depends_lib-append \
+		port:postgresql84
+	configure.args-append \
+		--with-pgsql=shared,${prefix}/lib/postgresql84/bin \
+		--with-pdo-pgsql=shared,${prefix}/lib/postgresql84/bin
+}
+variant soap description {Add SOAP support} {
+	configure.args-append \
+		--enable-soap=shared
+}
+variant tidy description {Add Tidy support} {
+	depends_lib-append      port:tidy
+	configure.args-append   --with-tidy=shared,${prefix}
+}
+
+variant zip description {Add zip support} {
+	configure.args-append \
+		--enable-zip=shared
+}
+
+variant ipc description {Add semaphore, shared memory and IPC functions} {
+    configure.args-append \
+        --enable-shmop \
+        --enable-sysvsem \
+        --enable-sysvshm \
+        --enable-sysvmsg
+}
+if {![variant_isset apache] && ![variant_isset apache2] && ![variant_isset fastcgi] && ![variant_isset no_web]} {
+    default_variants +fpm
+}
+variant pear description {Add PEAR} {
+    configure.args-delete \
+        --without-pear
+    configure.args-append \
+        --with-pear=${prefix}/lib/php
+    destroot.target-append \
+        install-pear
+    destroot.args-append \
+        PHP_PEAR_INSTALL_DIR=${prefix}/lib/php
+    post-destroot {
+        #nuke pear-stuff in ${destroot}
+        system "cd ${destroot} && rm -rf .channels .depdb .depdblock .filemap .lock"
+       
+        system "if \[ -f ${prefix}/lib/php/.depdblock \]; then rm -f ${destroot}${prefix}/lib/php/.depdblock; fi"
+        system "if \[ -f ${prefix}/lib/php/.depdb \]; then rm -f ${destroot}${prefix}/lib/php/.depdb; fi"
+        system "if \[ -f ${prefix}/lib/php/.filemap \]; then rm -f ${destroot}${prefix}/lib/php/.filemap; fi"
+        system "if \[ -f ${prefix}/lib/php/.lock \]; then rm -f ${destroot}${prefix}/lib/php/.lock; fi"
+        system "if \[ -d ${prefix}/lib/php/.channels \]; then rm -rf ${destroot}${prefix}/lib/php/.channels; fi"
+    }
+}
+variant suhosin description {Add Suhosin patch} {
+    pre-fetch {
+        if {"darwin" == ${os.platform} && ${os.major} < 9} {
+            ui_error "The suhosin variant requires Mac OS X 10.5 or greater."
+            return -code error "incompatible Mac OS X version"
+        }
+    }
+    set suhosin_patch_version   ${version}-0.9.10
+    set suhosin_patch           suhosin-patch-${suhosin_patch_version}.patch.gz
+    patch_sites-append          http://download.suhosin.org/
+    patchfiles-append           ${suhosin_patch}
+    checksums-append \
+        ${suhosin_patch} \
+            md5     b66b27c43b1332400ef8982944c3b95b \
+            sha1    c48d3f24341d3b0214ca3e980320b23864aa93ba \
+            rmd160  64d8b7ec2ec91fd7a43b0cd95c0aa0df5b666768
+}
+
+# fpm
+variant fpm conflicts apache apache2 fastcgi description {FPM support} {
+    pre-fetch {
+        if {"darwin" == ${os.platform} && ${os.major} < 9} {
+            ui_error "The suhosin variant requires Mac OS X 10.5 or greater."
+            return -code error "incompatible Mac OS X version"
+        }
+    }
+	configure.args-delete \
+        --disable-cgi
+    configure.args-append \
+		--enable-cgi --enable-fpm
+	startupitem.create      yes
+	startupitem.name        php-fpm
+	startupitem.logfile     ${prefix}/var/log/php-fpm.log
+	#startupitem.executable  ${prefix}/sbin/php-fpm -y ${prefix}/etc/php-fpm.conf
+	#startupitem.pidfile     auto ${prefix}/var/run/php-fpm.pid
+	startupitem.start       "${prefix}/sbin/php-fpm.init start"
+	startupitem.stop        "${prefix}/sbin/php-fpm.init stop"
+	startupitem.restart     "${prefix}/sbin/php-fpm.init reload"
+	startupitem.logevents   yes
+
+	post-destroot {
+		xinstall -m 755 -d ${destroot}${prefix}/var/log/php
+		xinstall -m 755 -c ${worksrcpath}/sapi/fpm/init.d.php-fpm ${destroot}${prefix}/sbin/php-fpm.init
+	}
+	post-activate {
+		if {[file exists ${prefix}/etc/php-fpm.conf.default] && ![file exists ${prefix}/etc/php-fpm.conf]} {
+			copy ${prefix}/etc/php-fpm.conf.default ${prefix}/etc/php-fpm.conf
+		}
+	}
+
+}
+
+
+destroot.args \
+    INSTALL_ROOT=${destroot}
+destroot.target \
+    install-cli install-modules install-build install-headers install-programs
+post-destroot {
+    # Copy the Apache 1 module.
+    if { [variant_isset apache] } {
+        xinstall -m 755 -d ${destroot}${prefix}/libexec/apache \
+            ${destroot}${prefix}/etc/apache/extra
+        xinstall -m 755 ${worksrcpath}/libs/libphp5.so ${destroot}${prefix}/libexec/apache/
+        xinstall -m 755 -c ${filespath}/mod_php.conf ${destroot}$prefix/etc/apache/extra
+    }
+   
+    # Copy the Apache 2.2 module.
+    if { [variant_isset apache2] } {
+        xinstall -m 755 -d ${destroot}${prefix}/apache2/modules \
+            ${destroot}${prefix}/apache2/conf/extra
+        xinstall -m 755 ${worksrcpath}/libs/libphp5.so ${destroot}${prefix}/apache2/modules/
+        xinstall -m 755 -c ${filespath}/mod_php.conf ${destroot}${prefix}/apache2/conf/extra
+    }
+   
+    if { [variant_isset fastcgi] } {
+        # If we've built an Apache module (any version) then the FastCGI binary
+        # will not have been built, so we need to run through the whole process
+        # again and build just the FastCGI binary. Keep the options here in sync
+        # with the options specified in the apache and apache2 variants.
+        if { [variant_isset apache] } {
+            if { ![variant_isset macosx] && (![info exists os.subplatform] || ${os.subplatform} != "macosx") } {
+                configure.args-delete \
+                    --with-apxs=${prefix}/sbin/apxs
+            } else {
+                configure.args-delete \
+                    --with-apxs=/usr/sbin/apxs
+            }
+        }
+        if { [variant_isset apache2] } {
+            configure.args-delete \
+                --with-apxs2=${prefix}/apache2/bin/apxs
+        }
+       
+        # Run the build again to get the FastCGI binary. Keep the options here
+        # in sync with those in the fastcgi variant.
+        if { [variant_isset apache] || [variant_isset apache2] } {
+            configure.args-delete \
+                --disable-cgi
+            configure.args-append \
+                --enable-cgi
+            ui_msg "$UI_PREFIX Configuring ${name} again for fastcgi"
+            command_exec configure
+            ui_msg "$UI_PREFIX Building ${name} again for fastcgi"
+            command_exec build
+            ui_msg "$UI_PREFIX Staging ${name} fastcgi into destroot"
+        }
+       
+        # Copy the FastCGI binary to the bin dir under a new name so it doesn't
+        # conflict with the cli version.
+        xinstall -m 755 ${worksrcpath}/sapi/cgi/php-cgi ${destroot}${prefix}/bin
+    }
+   
+    #file rename ${destroot}${prefix}/etc/pear.conf ${destroot}${prefix}/etc/pear.conf.sample
+   
+    # Copy the default php.ini files.
+    xinstall -m 755 -d ${destroot}${phpinidir}
+    xinstall -m 644 -W ${worksrcpath} \
+        php.ini-development \
+        php.ini-production \
+        ${destroot}${phpinidir}
+   
+    # Copy mysqlnd headers.
+    xinstall -d ${destroot}${prefix}/include/php/ext/mysqlnd
+    eval xinstall -m 644 [glob ${worksrcpath}/ext/mysqlnd/*.h] ${destroot}${prefix}/include/php/ext/mysqlnd
+}
+pre-activate {
+    set filepath ${extraphpinidir}/.turd_${name}
+    if {[file exists ${filepath}]} {
+        delete ${filepath}
+    }
+}
+post-activate {
+    if {[file exists ${prefix}/etc/php.ini] && ![file exists ${phpinidir}/php.ini]} {
+        move ${prefix}/etc/php.ini ${phpinidir}
+        ui_msg "Your ${prefix}/etc/php.ini has been moved to ${phpinidir}/php.ini"
+        ui_msg ""
+    }
+    if {![file exists ${phpinidir}/php.ini]} {
+        ui_msg "To customize php, copy"
+        ui_msg "${phpinidir}/php.ini-development (if this is a development server) or"
+        ui_msg "${phpinidir}/php.ini-production (if this is a production server) to"
+        ui_msg "${phpinidir}/php.ini and then make changes."
+    } else {
+        ui_msg "You may need to update your php.ini for any changes that have been made"
+        ui_msg "in this version of php. Compare ${phpinidir}/php.ini with"
+        ui_msg "${phpinidir}/php.ini-development (if this is a development server) or"
+        ui_msg "${phpinidir}/php.ini-production (if this is a production server)."
+    }
+   
+    if {![variant_isset no_web]} {
+        ui_msg ""
+        ui_msg "If this is your first install, you need to activate PHP in your web server."
+        if {![variant_isset fastcgi] && ![variant_isset fpm]} {
+            if {[variant_isset apache]} {
+                set moduledir ${prefix}/libexec/modules
+                set apxs ${prefix}/apache/bin/apxs
+            }
+            if {[variant_isset apache2]} {
+                set moduledir ${prefix}/apache2/modules
+                set apxs ${prefix}/apache2/bin/apxs
+            }
+            ui_msg ""
+            ui_msg "To enable PHP in Apache, run"
+            ui_msg "  cd ${moduledir}"
+            ui_msg "  ${apxs} -a -e -n \"${my_name}\" lib${my_name}.so"
+        }
+    }
+   
+    #ui_msg "* copy  ${prefix}/etc/pear.conf.sample to  ${prefix}/etc/pear.conf"
+}
+variant debug description {Enable debug support (useful to analyze a PHP-related core dump)} {
+    configure.args-append   --enable-debug
+}
+test.run                yes
+livecheck.type          regex
+livecheck.url           ${homepage}downloads.php
+livecheck.regex         get/php-(5\\.\[0-9.\]+)\\.tar
+
