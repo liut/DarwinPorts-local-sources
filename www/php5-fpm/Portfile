@@ -3,7 +3,7 @@ PortSystem              1.0
 name                    php5-fpm
 conflicts               php5-cgi php5-devel php52
 epoch                   1
-version                 5.3.4
+version                 5.3.6
 set major               [lindex [split ${version} .] 0]
 set my_name             php${major}
 dist_subdir             ${my_name}
@@ -23,9 +23,9 @@ long_description \
     be used for command-line scripting.
 checksums \
     [suffix ${distname}] \
-    md5     2c069d8f690933e3bf6a8741ed818150 \
-    sha1    0b33926e78e1683e3383b3b5c840ee60ba669b0b \
-    rmd160  dffbeced87117fd34c948de3ebdde01a25c24dae
+    md5     2286f5a82a6e8397955a0025c1c2ad98 \
+    sha1    0e0b9b4d9117f22080e2204afa9383469eb0dbbd \
+    rmd160  619bf96cf24bf6aa0988494186f8914fde94d44d
 depends_build \
     port:pkgconfig \
     port:autoconf213
@@ -196,7 +196,7 @@ variant mysqlnd conflicts mysql4 mysql5 description {Use MySQL Native Driver} {
 }
 variant postgresql description {Add PostgreSQL support} {
 	depends_lib-append \
-		port:postgresql84
+		port:postgresql90
 	configure.args-append \
 		--with-pgsql=shared,${prefix}/lib/postgresql84/bin \
 		--with-pdo-pgsql=shared,${prefix}/lib/postgresql84/bin
