@@ -1,9 +1,13 @@
+# -*- coding: utf-8; mode: tcl; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- vim:fenc=utf-8:ft=tcl:et:sw=4:ts=4:sts=4
 # $Id$
+
 PortSystem              1.0
+
 name                    php5-fpm
-conflicts               php5-cgi php5-devel php52
+conflicts               php5-cgi php5-devel php52 php5
+
 epoch                   1
-version                 5.3.6
+version                 5.3.10
 set major               [lindex [split ${version} .] 0]
 set my_name             php${major}
 dist_subdir             ${my_name}
@@ -15,20 +19,24 @@ distname                php-${version}
 use_bzip2               yes
 platforms               darwin freebsd
 use_parallel_build      yes
-description \
-    PHP: Hypertext Preprocessor
+
+description 			PHP: Hypertext Preprocessor
+
 long_description \
     PHP is a widely-used general-purpose scripting language \
     that is especially suited for developing web sites, but can also \
     be used for command-line scripting.
+
 checksums \
     [suffix ${distname}] \
-    md5     2286f5a82a6e8397955a0025c1c2ad98 \
-    sha1    0e0b9b4d9117f22080e2204afa9383469eb0dbbd \
-    rmd160  619bf96cf24bf6aa0988494186f8914fde94d44d
+    md5     816259e5ca7d0a7e943e56a3bb32b17f \
+    sha1    689d8463b5d9e24b9bf297e35826f2ebdb69afda \
+    rmd160  acab30a19b340f21a64e06b524906f2b064dd1c9
+
 depends_build \
     port:pkgconfig \
     port:autoconf213
+
 depends_lib \
     path:bin/gsed:gsed \
     port:libevent \
@@ -41,15 +49,24 @@ depends_lib \
     port:pcre \
     port:readline \
     port:zlib
+
 # Use -p1 to accommodate the Suhosin patch
-#patch.pre_args          -p1
-#patchfiles \
-#    patch-scripts-php-config.in.diff
+patch.pre_args          -p1
+patchfiles              patch-configure.in.diff \
+                        patch-scripts-php-config.in.diff
+
 use_autoconf            yes
 autoconf.cmd            ${prefix}/bin/autoconf213
+
 set phpinidir           ${prefix}/etc/${my_name}
 set extraphpinidir      ${prefix}/var/db/${my_name}
+
 destroot.keepdirs       ${destroot}${extraphpinidir}
+
+if {${configure.compiler} == "clang"} {
+    configure.compiler llvm-gcc-4.2
+}
+
 configure.args \
     --mandir=${prefix}/share/man \
     --infodir=${prefix}/share/info \
@@ -61,14 +78,14 @@ configure.args \
     --enable-dom \
     --enable-fileinfo=shared \
     --enable-filter \
-    --enable-ftp \
+    --enable-ftp=shared \
     --enable-hash \
     --enable-json \
     --enable-libxml \
 	--enable-mbstring=shared \
     --enable-pdo \
     --enable-phar \
-    --enable-session \
+    --enable-session=shared \
     --enable-simplexml=shared \
     --enable-tokenizer \
     --enable-xml \
@@ -77,16 +94,18 @@ configure.args \
     --with-bz2=shared,${prefix} \
 	--with-iconv=${prefix} \
 	--with-curl=${prefix} \
-    --with-openssl=${prefix} \
+    --with-openssl=shared,${prefix} \
     --with-pcre-regex=${prefix} \
     --with-readline=${prefix} \
     --with-libxml-dir=${prefix} \
     --with-zlib=${prefix} \
-    --without-pear \
-    --disable-cgi
+    --without-pear 
+
 # php5-mysql +mysqlnd needs mysqlnd support compiled into php
 configure.env-append    PHP_MYSQLND_ENABLED=yes
+
 configure.universal_args-delete --disable-dependency-tracking
+
 platform darwin 10 {
     configure.env-append \
         LIBS=-lresolv
