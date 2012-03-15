@@ -74,15 +74,13 @@ configure.args \
     --with-config-file-scan-dir=${extraphpinidir} \
     --disable-all \
     --enable-bcmath=shared \
-    --enable-ctype \
+    --enable-ctype=shared \
     --enable-dom \
     --enable-fileinfo=shared \
     --enable-filter \
-    --enable-ftp=shared \
     --enable-hash \
     --enable-json \
     --enable-libxml \
-	--enable-mbstring=shared \
     --enable-pdo \
     --enable-phar \
     --enable-session=shared \
@@ -92,9 +90,6 @@ configure.args \
     --enable-xmlreader=shared \
     --enable-xmlwriter=shared \
     --with-bz2=shared,${prefix} \
-	--with-iconv=${prefix} \
-	--with-curl=${prefix} \
-    --with-openssl=shared,${prefix} \
     --with-pcre-regex=${prefix} \
     --with-readline=${prefix} \
     --with-libxml-dir=${prefix} \
@@ -110,11 +105,7 @@ platform darwin 10 {
     configure.env-append \
         LIBS=-lresolv
 }
-platform macosx {
-    configure.args-append \
-		--with-kerberos=/usr \
-		--with-ldap=/usr
-}
+
 variant no_web conflicts apache apache2 fastcgi description {Don't include any web server support} {}
 # Build an Apache 1 module. On Mac OS X, it uses Apple's provided Apache 1 server.
 # On other platforms, the MacPorts apache port is used. Keep the options here
@@ -158,33 +149,7 @@ variant fastcgi conflicts no_web description {Add FastCGI web server binary} {
             --enable-cgi
     }
 }
-foreach {old_variant new_port} {
-    gmp             gmp
-    imap            imap
-    macports_snmp   snmp
-    mssql           mssql
-    mysql3          mysql
-    mysql4          mysql
-    mysql5          mysql
-    mysqlnd         mysql
-    oracle          oracle
-    pcntl           pcntl
-    postgresql82    postgresql
-    postgresql83    postgresql
-    pspell          pspell
-    snmp            snmp
-    sockets         sockets
-    sqlite          sqlite
-    tidy            tidy
-} {
-    eval [subst {
-        variant ${old_variant} description "Obsolete; install ${my_name}-${new_port} port instead" {
-            pre-configure {
-                ui_msg "The +${old_variant} variant is obsolete. Please install the ${my_name}-${new_port} port instead."
-            }
-        }
-    }]
-}
+
 variant gd description {Add GD support} {
 	depends_lib-append \
 		port:freetype \
@@ -199,6 +164,7 @@ variant gd description {Add GD support} {
 		--with-zlib-dir=${prefix} \
 		--enable-gd-native-ttf
 }
+
 variant mysqlnd conflicts mysql4 mysql5 description {Use MySQL Native Driver} {
     configure.args-append       --with-mysql=shared,mysqlnd \
 								--with-mysqli=shared,mysqlnd \
@@ -213,6 +179,7 @@ variant mysqlnd conflicts mysql4 mysql5 description {Use MySQL Native Driver} {
         }
     }
 }
+
 variant postgresql description {Add PostgreSQL support} {
 	depends_lib-append \
 		port:postgresql90
@@ -220,10 +187,7 @@ variant postgresql description {Add PostgreSQL support} {
 		--with-pgsql=shared,${prefix}/lib/postgresql84/bin \
 		--with-pdo-pgsql=shared,${prefix}/lib/postgresql84/bin
 }
-variant soap description {Add SOAP support} {
-	configure.args-append \
-		--enable-soap=shared
-}
+
 variant tidy description {Add Tidy support} {
 	depends_lib-append      port:tidy
 	configure.args-append   --with-tidy=shared,${prefix}
