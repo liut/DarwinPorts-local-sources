@@ -1,0 +1,20 @@
+# -*- coding: utf-8; mode: tcl; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- vim:fenc=utf-8:ft=tcl:et:sw=4:ts=4:sts=4
+# $Id$
+
+PortSystem              1.0
+PortGroup               php5extension 1.0
+
+php5extension.setup     yaf 2.1.9 pecl
+categories-append       devel www
+platforms               darwin freebsd openbsd
+maintainers             nomaintainer
+license                 PHP
+
+description             Yaf(Yet Another Framework), PHP Framework in PHP extension
+
+long_description        Yaf is a PHP framework similar to zend framework, which is written in c and built as PHP extension.
+
+checksums               sha1    c9866f5fd2b73ff03c09361d5a7be5815e4845c6 \
+                        rmd160  d20c857636c6600abf981bcee018c5cbfe874bc7
+
+

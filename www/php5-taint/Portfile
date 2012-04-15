@@ -1,0 +1,21 @@
+# -*- coding: utf-8; mode: tcl; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- vim:fenc=utf-8:ft=tcl:et:sw=4:ts=4:sts=4
+# $Id$
+
+PortSystem              1.0
+PortGroup               php5extension 1.0
+
+php5extension.setup     taint 0.5.1 pecl
+categories-append       devel www
+platforms               darwin freebsd openbsd
+maintainers             nomaintainer
+license                 PHP
+
+description             XSS code sniffer
+
+long_description        An extension used for detecting XSS codes(tainted string),\
+						And also can be used to spot sql injection vulnerabilities, shell inject, etc.
+
+checksums               sha1    be92bb24d7735d9c97b001d831365b32a33b0c2f \
+                        rmd160  1ce2b3a08f14f81aae77b326ebb610a09bffea1c
+
+

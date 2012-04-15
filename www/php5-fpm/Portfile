@@ -40,12 +40,9 @@ depends_build \
 depends_lib \
     path:bin/gsed:gsed \
     port:libevent \
-	port:libiconv \
     port:libtool \
     port:libxml2 \
     port:bzip2 \
-	port:curl \
-    port:openssl \
     port:pcre \
     port:readline \
     port:zlib
@@ -184,8 +181,8 @@ variant postgresql description {Add PostgreSQL support} {
 	depends_lib-append \
 		port:postgresql90
 	configure.args-append \
-		--with-pgsql=shared,${prefix}/lib/postgresql84/bin \
-		--with-pdo-pgsql=shared,${prefix}/lib/postgresql84/bin
+		--with-pgsql=shared,${prefix}/lib/postgresql90/bin \
+		--with-pdo-pgsql=shared,${prefix}/lib/postgresql90/bin
 }
 
 variant tidy description {Add Tidy support} {
