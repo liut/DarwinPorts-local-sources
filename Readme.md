@@ -22,3 +22,17 @@ $ sudo vim /opt/local/etc/macports/sources.conf
 	rsync://rsync.macports.org/release/ports/ [default]
 
 
+
+### current ports
+
+* php5-fpm: set fpm as default variant
+
+>	sudo port -v install php5-fpm +mysqlnd+zip
+
+* php5-taint: http://pecl.php.net/package/taint/
+
+>	sudo port -v install php5-taint
+
+* php5-yaf: http://pecl.php.net/package/yaf/
+
+>	sudo port -v install php5-yaf
