@@ -4,7 +4,7 @@
 PortSystem              1.0
 PortGroup               php5extension 1.0
 
-php5extension.setup     taint 0.5.1 pecl
+php5extension.setup     taint 0.5.2 pecl
 categories-append       devel www
 platforms               darwin freebsd openbsd
 maintainers             nomaintainer
@@ -15,7 +15,7 @@ description             XSS code sniffer
 long_description        An extension used for detecting XSS codes(tainted string),\
 						And also can be used to spot sql injection vulnerabilities, shell inject, etc.
 
-checksums               sha1    be92bb24d7735d9c97b001d831365b32a33b0c2f \
-                        rmd160  1ce2b3a08f14f81aae77b326ebb610a09bffea1c
+checksums               sha1    ad29c5d6e88df3e8470973cd3e79ed91bfbc8b41 \
+                        rmd160  5f61191994aed612d4eeb82c025dbef51e0448ef
 
 
