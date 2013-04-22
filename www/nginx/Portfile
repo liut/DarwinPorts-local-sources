@@ -187,7 +187,7 @@ variant upload_progress description {Enable Brice Figureau's upload progress mod
     configure.args-append   --add-module=${workpath}/${uploadprg_distname}
 }
 
-variant http_concat description {A Nginx module for concatenating files in a given context: CSS and JS files usually (https://github.com/taobao/nginx-http-concat)} {
+variant http_concat description {A Nginx module for concatenating files in a given context: CSS and JS files usually (https://github.com/alibaba/nginx-http-concat)} {
     set http_concat_filename  nginx-http-concat
     set http_concat_version   1.2.2
     set http_concat_distname  ${http_concat_filename}-${http_concat_version}
