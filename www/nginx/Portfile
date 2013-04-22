@@ -27,7 +27,7 @@ master_sites        http://nginx.org/download:nginx \
                     googlecode:mod-zip:zip_module \
                     http://people.freebsd.org/~osa/:redis_module \
                     https://github.com/downloads/masterzen/nginx-upload-progress-module:uploadprogress_module \
-                    https://github.com/taobao/nginx-http-concat/archive/:http_concat_module \
+                    https://github.com/alibaba/nginx-http-concat/archive/:http_concat_module \
                     https://github.com/chaoslawful/lua-nginx-module/archive/:lua_nginx_module
 
 distfiles           nginx-${version}${extract.suffix}:nginx
