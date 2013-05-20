@@ -4,7 +4,7 @@
 PortSystem          1.0
 
 name                nginx
-version             1.2.7
+version             1.2.9
 conflicts           nginx nginx-devel
 categories          www
 platforms           darwin
@@ -32,14 +32,15 @@ master_sites        http://nginx.org/download:nginx \
 
 distfiles           nginx-${version}${extract.suffix}:nginx
 checksums           nginx-${version}${extract.suffix} \
-                    rmd160  d0903a6b170dbd33337d4bf939211c32060b1a66 \
-                    sha256  2457a878943fb409ec4fcb46b43af222d06a584f93228e17a4f02b0e7bfc9de3 \
+                    rmd160  accf3d0c12c72ee426247e18db108b8ed0c5db68 \
+                    sha256  71486674b757f6aa93a4f7ec6e68ef82557d4944deeb08f3ad3de00079d22b1c \
 
 depends_lib         port:pcre \
                     port:zlib
 
 patchfiles          patch-auto__install.diff \
-                    patch-conf__nginx.conf.diff
+                    patch-conf__nginx.conf.diff \
+                    patch-image_filter_watermark.diff
 
 set nginx_confdir   ${prefix}/etc/${name}
 set nginx_logdir    ${prefix}/var/log/${name}
@@ -203,15 +204,15 @@ variant http_concat description {A Nginx module for concatenating files in a giv
 
 variant lua_nginx description {Embed the Power of Lua into NginX (https://github.com/chaoslawful/lua-nginx-module)} {
     set lua_nginx_filename  lua-nginx-module
-    set lua_nginx_version   0.7.3
+    set lua_nginx_version   0.7.11
     set lua_nginx_distname  ${lua_nginx_filename}-${lua_nginx_version}
     distfiles-append        v${lua_nginx_version}.tar.gz:lua_nginx_module
     depends_lib-append      port:luajit
     configure.env-append    LUAJIT_INC=/opt/local/include/luajit-2.0 LUAJIT_LIB=/opt/local/lib 
 
     checksums-append        v${lua_nginx_version}.tar.gz \
-                            rmd160  4eaea4098837a108151da1a36eb93ff4ad0d58e3 \
-                            sha256  e1312bb6f4d3b1c2ae4dc04a94230a2bf47a1d144cb8fae047fb534c33468788
+                            rmd160  38307945385bcb0765df3946ab388eb3ac8b6aa1 \
+                            sha256  d200679d48fdbaf6674564aa5e0ae891df065b5a3ba6a2a4350827e16117c897
     configure.args-append   --add-module=${workpath}/${lua_nginx_distname}
 }
 
