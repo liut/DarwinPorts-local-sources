@@ -1,0 +1,66 @@
+# -*- coding: utf-8; mode: tcl; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- vim:fenc=utf-8:ft=tcl:et:sw=4:ts=4:sts=4
+# $Id$
+
+PortSystem              1.0
+
+name                    leveldb
+version                 1.13.0
+categories              devel database
+platforms               darwin
+maintainers             sanjay@google jeff@google
+license                 BSD
+
+description             A fast and lightweight key/value database library by Google.
+
+long_description        LevelDB is a fast key-value storage library \
+                        written at Google that provides \
+                        an ordered mapping from string keys to string values.
+
+homepage                http://code.google.com/p/leveldb/
+master_sites            googlecode
+
+checksums               rmd160  b0808ce46b634ab46d428f22a594cac1dd8ab731 \
+                        sha256  083497a48ff54a3470ab5085730306a536013c0db54db6854bd9c8638c4f33f7
+
+
+distname                leveldb-${version}
+
+default_variants    +universal +snappy
+
+variant snappy {
+    depends_lib         port:snappy
+}
+
+variant universal {
+    build.env CXXFLAGS="-arch x86_64 -arch i386"
+    build.env LDFLAGS="-arch x86_64 -arch i386"
+}
+
+use_configure    no
+configure {}
+
+destroot {
+    xinstall -m 755 -d ${destroot}${prefix}/lib
+    eval file copy [glob ${worksrcpath}/libleveldb.*] ${destroot}${prefix}/lib
+    xinstall -m 644 -d ${destroot}${prefix}/include
+    xinstall -m 644 ${worksrcpath}/helpers/memenv/memenv.h ${destroot}${prefix}/include
+    file copy ${worksrcpath}/include/leveldb ${destroot}${prefix}/include
+}
+
+post-destroot {
+    set docdir ${destroot}${prefix}/share/doc/${name}
+    xinstall -d ${docdir}
+    xinstall -m 644 -W ${worksrcpath} \
+        AUTHORS \
+        LICENSE \
+        NEWS \
+        TODO \
+        README \
+        ${docdir}
+}
+
+variant debug description {Compile with debugging information and reduce optimization level} {
+    configure.optflags -O1
+    configure.cflags-append -ggdb
+    configure.cxxflags-append -ggdb
+}
