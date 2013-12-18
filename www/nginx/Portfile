@@ -1,12 +1,11 @@
 # -*- coding: utf-8; mode: tcl; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*- vim:fenc=utf-8:ft=tcl:et:sw=4:ts=4:sts=4
-# $Id: Portfile 98185 2012-09-27 21:57:07Z cal@macports.org $
+# $Id: Portfile 113677 2013-11-22 21:43:35Z cal@macports.org $
 
 PortSystem          1.0
 
 name                nginx
-version             1.2.9
-conflicts           nginx nginx-devel
-categories          www
+version             1.4.4
+categories          www mail
 platforms           darwin
 license             BSD
 maintainers         cal openmaintainer
@@ -30,23 +29,33 @@ master_sites        http://nginx.org/download:nginx \
                     https://github.com/alibaba/nginx-http-concat/archive/:http_concat_module \
                     https://github.com/chaoslawful/lua-nginx-module/archive/:lua_nginx_module
 
-distfiles           nginx-${version}${extract.suffix}:nginx
-checksums           nginx-${version}${extract.suffix} \
-                    rmd160  accf3d0c12c72ee426247e18db108b8ed0c5db68 \
-                    sha256  71486674b757f6aa93a4f7ec6e68ef82557d4944deeb08f3ad3de00079d22b1c \
+distfiles           ${name}-${version}${extract.suffix}:nginx
+checksums           ${name}-${version}${extract.suffix} \
+                    rmd160  7464306c47e270b82388e81327813ecedd09d54a \
+                    sha256  7c989a58e5408c9593da0bebcd0e4ffc3d892d1316ba5042ddb0be5b0b4102b9
 
 depends_lib         port:pcre \
                     port:zlib
 
 patchfiles          patch-auto__install.diff \
-                    patch-conf__nginx.conf.diff \
-                    patch-image_filter_watermark.diff
+                    patch-conf__nginx.conf.diff
 
 set nginx_confdir   ${prefix}/etc/${name}
 set nginx_logdir    ${prefix}/var/log/${name}
 set nginx_rundir    ${prefix}/var/run/${name}
 set nginx_pidfile   ${nginx_rundir}/${name}.pid
 set nginx_all_confs {fastcgi.conf fastcgi_params mime.types nginx.conf scgi_params uwsgi_params}
+
+# portfile-scoped vars for variant routines to re-def and use in port-stages (post-extract, pre-patch, etc)
+set nginx_upload_mod_dirname   ""
+set nginx_upload_progress_mod_dirname   ""
+
+# for aforementioned re-defs of portfile-scoped vars in variant routines
+proc nginx_set_portfile_var {var_name new_value} {
+    upvar   $var_name   portfile_var
+    set portfile_var   $new_value
+}
+
 
 configure.args-append \
                     --with-cc-opt=\"${configure.cppflags} ${configure.cflags}\" \
@@ -63,7 +72,7 @@ configure.args-append \
                     --with-ipv6
 
 # remove --disable-dependency-tracking
-configure.universal_args
+configure.universal_args-delete   --disable-dependency-tracking
 
 build.target        build
 destroot.keepdirs   ${destroot}${nginx_logdir} \
@@ -71,11 +80,9 @@ destroot.keepdirs   ${destroot}${nginx_logdir} \
 
 post-destroot {
     foreach conf ${nginx_all_confs} {
-        set conf_target "${destroot}${nginx_confdir}/${conf}.example"
-        if {![file exists "${conf_target}"]} {
-            file rename "${destroot}${nginx_confdir}/${conf}" "${destroot}${nginx_confdir}/${conf}.example"
-        } else {
-            file delete "${destroot}${nginx_confdir}/${conf}"
+        set conf_path "${destroot}${nginx_confdir}/${conf}"
+        if {[file exists ${conf_path}]} {
+            file delete ${conf_path}
         }
     }
     file mkdir ${destroot}${prefix}/share/nginx
@@ -85,6 +92,12 @@ post-destroot {
 startupitem.create      yes
 startupitem.pidfile     auto ${nginx_pidfile}
 startupitem.executable  ${prefix}/sbin/nginx
+
+notes                   \
+    "A sample nginx configuration file has been installed in
+    ${nginx_confdir}/nginx.conf.default.\nCopy the configuration to
+    ${nginx_confdir}/nginx.conf\nand adjust it to your needs before starting\
+    nginx."
 
 variant addition description {Append text to pages} {
     configure.args-append   --with-http_addition_module
@@ -110,6 +123,18 @@ variant geoip description {Enable Ngx http GeoIP module (http://wiki.nginx.org/H
 variant google_perftools description {Enable Google Performance Tools profiling for workers} {
     configure.args-append   --with-google_perftools_module
     depends_lib-append      port:google-perftools
+
+    # If 'google_perftools' port doesn't find headers needed for the profiler lib, it just quietly skips it.
+    # Check if "-lprofiler" will fail -- if so, pre-empt configure-stage error with a more useful error msg.
+    pre-configure {
+        if {![file exists "${prefix}/lib/libprofiler.dylib"] && ![file exists "${prefix}/lib/libprofiler.a"]} {
+            ui_error "\
+                The 'google-perftools' port did not install a libprofiler library (libprofiler.dylib or\
+                libprofiler.a) on your version of OS X, but the +google_perftools variant will not work\
+                without this library. Disable the +google_perftools variant to continue installing ${name}"
+            error "Required libprofiler library missing from google-perftools port."
+        }
+    }
 }
 
 variant gzip_static description {Avoids compressing the same file each time it is requested} {
@@ -155,6 +180,10 @@ variant ssl description {Add SSL (HTTPS) support to the server, and also to the 
     depends_lib-append      port:openssl
 }
 
+variant spdy requires ssl description {Add SPDY support to the server} {
+    configure.args-append   --with-http_spdy_module
+}
+
 variant status description {Add /nginx_status support to the server} {
     configure.args-append   --with-http_stub_status_module
 }
@@ -172,6 +201,21 @@ variant upload description {Enable Valery Kholodkov's upload module (http://grid
                             rmd160  5734af837be3fe8ec444a7e5e7f6707118594098 \
                             sha256  b1c26abe0427180602e257627b4ed21848c93cc20cefc33af084983767d65805
     configure.args-append   --add-module=${workpath}/${upload_distname}
+
+    # v2.2.0 release references members of ngx_http_request_body_t that were renamed in later nginx versions.
+    # Patch nginx_upload_module.c with fixed version from https://github.com/TimothyKlim/nginx-upload-module.
+    patchfiles-append       patch-nginx_upload_module.tmp-ngx_http_upload_module.c.diff
+
+
+    nginx_set_portfile_var   nginx_upload_mod_dirname    "${upload_distname}"
+
+    # patch routine balks on file names with "../", but rel-paths in patchfiles start from $worksrcpath
+    pre-patch {
+        ln -s   "${workpath}/${nginx_upload_mod_dirname}" "${worksrcpath}/nginx_upload_module.tmp"
+    }
+    post-patch {
+        file delete   "${worksrcpath}/nginx_upload_module.tmp"
+    }
 }
 
 variant upload_progress description {Enable Brice Figureau's upload progress module (https://github.com/masterzen/nginx-upload-progress-module)} {
@@ -179,13 +223,16 @@ variant upload_progress description {Enable Brice Figureau's upload progress mod
     set uploadprg_version   0.9.0
     set uploadprg_distname  ${uploadprg_filename}-${uploadprg_version}
     distfiles-append        ${uploadprg_distname}.tar.gz:uploadprogress_module
-    post-extract {
-        move [glob ${workpath}/masterzen-nginx-upload-progress-module-a788dea] ${workpath}/nginx_uploadprogress_module-0.9.0
-    }
     checksums-append        ${uploadprg_distname}.tar.gz \
                             rmd160  10ff91748a06afd81abb9fdb203f164ea369463a \
                             sha256  3fb903dab595cf6656fa0fc5743a48daffbba2f6b5c554836be630800eaad4e2
     configure.args-append   --add-module=${workpath}/${uploadprg_distname}
+
+    nginx_set_portfile_var  nginx_upload_progress_mod_dirname "${uploadprg_distname}"
+    post-extract {
+        move [glob -directory ${workpath} masterzen-nginx-upload-progress-module*] \
+            "${workpath}/${nginx_upload_progress_mod_dirname}"
+    }
 }
 
 variant http_concat description {A Nginx module for concatenating files in a given context: CSS and JS files usually (https://github.com/alibaba/nginx-http-concat)} {
@@ -193,9 +240,7 @@ variant http_concat description {A Nginx module for concatenating files in a giv
     set http_concat_version   1.2.2
     set http_concat_distname  ${http_concat_filename}-${http_concat_version}
     distfiles-append        ${http_concat_version}.tar.gz:http_concat_module
-    #post-extract {
-    #    move [glob ${workpath}/nginx-http-concat-1.2.2] ${workpath}/${http_concat_distname}
-    #}
+
     checksums-append        ${http_concat_version}.tar.gz \
                             rmd160  61ef4f29db0cabf401887d1c257a479d7c9b2747 \
                             sha256  3b27e9eb0478cbba65ba0beb844c5361e2e2f9c21e5bee8803ea9e707f4bbb47
@@ -204,20 +249,22 @@ variant http_concat description {A Nginx module for concatenating files in a giv
 
 variant lua_nginx description {Embed the Power of Lua into NginX (https://github.com/chaoslawful/lua-nginx-module)} {
     set lua_nginx_filename  lua-nginx-module
-    set lua_nginx_version   0.7.11
+    set lua_nginx_version   0.9.3
     set lua_nginx_distname  ${lua_nginx_filename}-${lua_nginx_version}
     distfiles-append        v${lua_nginx_version}.tar.gz:lua_nginx_module
     depends_lib-append      port:luajit
     configure.env-append    LUAJIT_INC=/opt/local/include/luajit-2.0 LUAJIT_LIB=/opt/local/lib 
 
     checksums-append        v${lua_nginx_version}.tar.gz \
-                            rmd160  38307945385bcb0765df3946ab388eb3ac8b6aa1 \
-                            sha256  d200679d48fdbaf6674564aa5e0ae891df065b5a3ba6a2a4350827e16117c897
+                            rmd160  8bb201fdd5d5a76c78dd6c7bdf10fe7d952f3137 \
+                            sha256  e3ce8fe59f4d2459aebc94e88f5de9b4a8010d403b5842cbb389bb18fceb8f1c
     configure.args-append   --add-module=${workpath}/${lua_nginx_distname}
 }
 
 variant xslt description {Post-process pages with XSLT} {
     configure.args-append   --with-http_xslt_module
+
+    depends_lib-append      port:libxslt
 }
 
 variant zip description {Enable Ngx zip download module \
@@ -243,5 +290,5 @@ variant redis description {Enable Ngx HTTP Redis module} {
 }
 
 livecheck.type      regex
-livecheck.url       http://trac.nginx.org/nginx/browser/nginx_org/xml/versions.xml?format=txt
-livecheck.regex     "<stable> *(\\d+(?:\\.\\d+)*)"
+livecheck.url       ${homepage}
+livecheck.regex     {nginx-(1\.4\.\d+)}
